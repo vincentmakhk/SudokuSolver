@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
+//using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -29,9 +29,12 @@ namespace sudokusolver
                 new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 }
             };
 
+            board = Construct9x9Matrix();
             mask = Construct9x9Matrix();
 
             depth = 0;
+            tries = 0;
+            maxdepth = 0;
         }
 
         internal void Run()
@@ -43,17 +46,25 @@ namespace sudokusolver
             Solve();
             //sw.Stop();
             //Console.WriteLine($"Time = {sw.Elapsed.ToString()}");
-            Output(board);
+            if (!IsSolved())
+            {
+                Console.WriteLine($"Cannot solve");
+            }
+            else
+            {
+                Console.WriteLine($"Solution:");
+                Output(board);
+            }
         }
 
         #region members
         int[][] board;
-
         int[][] regionMatrix;
-
         int[][] mask;
 
         int depth;
+        int tries;
+        int maxdepth;
         #endregion
 
         static int[][] Construct9x9Matrix()
@@ -86,7 +97,7 @@ namespace sudokusolver
 
             for(int i=0; i<9; ++i)
             {
-                for (int j = 0; j < 9; ++j)
+                for (int j = 0; j < 9 && j < t[i].Length; ++j)
                     if (t[i][j] >= '1' && t[i][j] <= '9')
                         u[i][j] = t[i][j] - '0';
             }
@@ -96,6 +107,9 @@ namespace sudokusolver
 
         static void Output(int[][] u)
         {
+            if (u == null)
+                return;
+
             for (int i = 0; i < 9; ++i)
             {
                 for (int j = 0; j < 9; ++j)
@@ -117,7 +131,7 @@ namespace sudokusolver
 
             //Output(board);
 
-            //NeedGuess();
+            NeedGuess();
 
             //Output(board);
         }
@@ -246,18 +260,18 @@ namespace sudokusolver
                 new int[] { 6, 7, 8 }
             };
 
-            for (int r = 0; r < 9; ++r) // loop each region
+            for (int regionNumber = 0; regionNumber < 9; ++regionNumber) // loop each region
             {
-                var rows = sqToRow[r];
-                var cols = sqToCol[r];
+                var rows = sqToRow[regionNumber];
+                var cols = sqToCol[regionNumber];
                 int[] rowTrial = new int[10]; // only this row of this region can put in this number
                 int[] colTrial = new int[10]; // only this col of this region can put in this number
                 rowTrial[0] = -1;
                 colTrial[0] = -1;
                 for (int trial = 1; trial <= 9; ++trial)
                 {                    
-                    rowTrial[trial] = IsOnlyOneStraightFitsInThisRegion(sqRowCount[r], rows, trial);
-                    colTrial[trial] = IsOnlyOneStraightFitsInThisRegion(sqColCount[r], cols, trial);
+                    rowTrial[trial] = IsOnlyOneStraightFitsInThisRegion(sqRowCount[regionNumber], rows, trial);
+                    colTrial[trial] = IsOnlyOneStraightFitsInThisRegion(sqColCount[regionNumber], cols, trial);
                     //HandleOneRowFitsInThisRegion(r, sqRowCount[r], rows, trial);
                     //HandleOneColFitsInThisRegion(r, sqColCount[r], cols, trial);
                 }
@@ -265,9 +279,49 @@ namespace sudokusolver
                 // loop row/col index
                 for(int index = 0; index < 3; ++index)
                 {
-                    CheckTrials(r, rowTrial, index, rows, sqColCount[r], cols, ((i, j) => i), ((i, j) => j));
-                    CheckTrials(r, colTrial, index, cols, sqRowCount[r], rows, ((i, j) => j), ((i, j) => i));
+                    CheckTrials(regionNumber, rowTrial, index, rows, sqColCount[regionNumber], cols, ((i, j) => i), ((i, j) => j));
+                    CheckTrials(regionNumber, colTrial, index, cols, sqRowCount[regionNumber], rows, ((i, j) => j), ((i, j) => i));
+                    /*
+                    var trials = CollectTrials(rowTrial, index);
+                    // if only three numbers can put in this row
+                    if (trials.Count == 3)
+                    {
+                        // for rows[index], mask other than these numbers
+                        // for others rows, mask these 3 numbers
+                        MaskRowInRegionForTheseNumbers(regionNumber, ((i, j) => i == rows[index]), trials);
+                    }
+                    else if (trials.Count == 2)
+                    {
+                        // test the other col/row if only two can fit in
+                        int indexCol = IsTwoStraightsFitsInThisRegion(sqColCount[regionNumber], cols, trials);
 
+                        // if yes, mask all other cells than those two in this region for all 2 numbers
+                        if (indexCol != -1)
+                        {
+                            MaskRowInRegionForTheseNumbers(regionNumber, ((i, j) => i == rows[index] && j != cols[indexCol]), trials);
+                        }
+                    }
+
+                    trials = CollectTrials(colTrial, index);
+                    // if only three numbers can put in this row
+                    if (trials.Count == 3)
+                    {
+                        // for rows[index], mask other than these numbers
+                        // for others rows, mask these 3 numbers
+                        MaskRowInRegionForTheseNumbers(regionNumber, ((i, j) => j == cols[index]), trials);
+                    }
+                    else if (trials.Count == 2)
+                    {
+                        // test the other col/row if only two can fit in
+                        int indexCol = IsTwoStraightsFitsInThisRegion(sqRowCount[regionNumber], rows, trials);
+
+                        // if yes, mask all other cells than those two in this region for all 2 numbers
+                        if (indexCol != -1)
+                        {
+                            MaskRowInRegionForTheseNumbers(regionNumber, ((i, j) => j == cols[index] && i != rows[indexCol]), trials);
+                        }
+                    }
+                    */
                 }
             }
 
@@ -291,7 +345,7 @@ namespace sudokusolver
                 // if yes, mask all other cells than those two in this region for all 2 numbers
                 if (indexCol != -1)
                 {
-                    MaskRowInRegionForTheseNumbers(regionNumber, ((i,j)=> getRow(i,j) == rows[index] && getCol(i,j)!=indexCol), trials);
+                    MaskRowInRegionForTheseNumbers(regionNumber, ((i,j)=> getRow(i,j) == rows[index] && getCol(i,j)!=cols[indexCol]), trials);
                 }
             }
         }
@@ -317,7 +371,7 @@ namespace sudokusolver
 
         private void MaskRowInRegionForTheseNumbers(int regionNumber, Func<int, int, bool> func, List<int> trails)
         {
-            Console.WriteLine($"MaskRowInRegionForTheseNumber: {regionNumber} {string.Join(",", trails.Select(x=>x.ToString()))}");
+            //Console.WriteLine($"MaskRowInRegionForTheseNumber: {regionNumber} {string.Join(",", trails.Select(x=>x.ToString()))}");
 
             int masks = ConstructMask(trails);
             int negateMasks = 1022 ^ masks;
@@ -407,7 +461,7 @@ namespace sudokusolver
                     if (k > 0)
                     {
                         Assign(row, col, sq, i, j, regionMatrix[i][j], k);
-                        Console.WriteLine($"FindMissingOne = {i} {j} {k} {board[i][j]}");
+                        //Console.WriteLine($"FindMissingOne = {i} {j} {k} {board[i][j]}");
                         //Output(u);
                         return true;
                         //filled = true;
@@ -449,7 +503,7 @@ namespace sudokusolver
 
                         if (d1 == 1 || d2 == 1 || d3 == 1) // only itself
                         {
-                            Console.WriteLine($"FindOnlyOneFit = {i} {j} {trial} {board[i][j]}");
+                            //Console.WriteLine($"FindOnlyOneFit = {i} {j} {trial} {board[i][j]}");
                             Assign(x, y, z, i, j, regionMatrix[i][j], trial);
                             //filled = true;
                             //break;
@@ -477,27 +531,41 @@ namespace sudokusolver
             return true;
         }
 
-        private int[][] Guess(int pos_i, int pos_j, int depth, ref int count, ref int maxdepth)
+        private Program Clone(int pos_i, int pos_j, int trial)
+        {
+            var p = new Program();
+
+            for (int i = 0; i < 9; ++i)
+                for (int j = 0; j < 9; ++j)
+                    p.board[i][j] = board[i][j];
+
+            p.board[pos_i][pos_j] = trial;
+            p.depth = depth + 1;
+            p.maxdepth = depth + 1;
+            p.tries = 1;
+            //Output(p.board);
+            return p;
+        }
+
+        private int[][] Guess(int pos_i, int pos_j, int _depth)
         {
             for(int trial = 1; trial <= 9; ++trial)
             {
-                if (0 == (board[pos_i][pos_j] & (1 << trial)))
+                if (0 != (mask[pos_i][pos_j] & (1 << trial))) // not allowed
                     continue;
 
-                ++count;
-                if (depth > maxdepth)
-                    maxdepth = depth;
-
-                var p = new Program();
-                for (int i = 0; i < 9; ++i)
-                    for (int j = 0; j < 9; ++j)
-                        p.board[i][j] = board[i][j];
-
-                p.board[pos_i][pos_j] = trial;
-                p.depth = depth + 1;
+                var p = Clone(pos_i, pos_j, trial);
                 p.Solve();
+
+                tries += p.tries;
+                maxdepth = Math.Max(maxdepth, p.maxdepth);
+
+                //Output(p.board);
+
                 if (p.IsSolved())
                     return p.board;
+
+                //Console.WriteLine($"Guess {depth} {pos_i} {pos_j} {trial}");
             }
 
             return null;
@@ -512,11 +580,17 @@ namespace sudokusolver
                 {
                     if (board[i][j] == 0)
                         ++count;
+
+                    //if (mask[i][j] == 1022)
+                    //    return;
                 }
             }
 
             if (count == 0)
                 return;
+
+            //if (depth == 0)
+            //    Output(board);
 
             // find count/2
             int target = (count / 2);
@@ -527,12 +601,25 @@ namespace sudokusolver
                 {
                     if (board[i][j] == 0)
                     {
+                        if (mask[i][j] == 1022)
+                            return;
+
                         if (--target <= 0)
                         {
-                            int tries = 0, maxdepth = 0;
-                            var board = Guess(i, j, depth, ref tries, ref maxdepth);
+                            var answer = Guess(i, j, depth);
+                            if (answer != null)
+                                board = answer;
+
                             if (depth == 0)
+                            {
                                 Console.WriteLine($"tries = {tries}, maxdepth = {maxdepth}");
+                                if (answer == null)
+                                {
+                                    Console.WriteLine("Cannot solve");
+                                    throw new NotImplementedException();
+
+                                }
+                            }
                             return;
                         }
                     }

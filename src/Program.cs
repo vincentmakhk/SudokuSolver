@@ -10,12 +10,42 @@ namespace sudokusolver
     {
         static void Main(string[] args)
         {
-            var t = Read();
-            var u = Convert(t);
-            var r = Solve(u);
-            Output(r);
+            var prog = new Program();
+            prog.Run();
         }
 
+        public Program()
+        {
+            regionMatrix = new int[][] {
+                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
+                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
+                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
+                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
+                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
+                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
+                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 },
+                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 },
+                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 }
+            };
+
+            mask = new int[9][];
+            for (int i = 0; i < 9; ++i)
+                mask[i] = new int[9];
+        }
+
+        internal void Run()
+        {
+            var t = Read();
+            board = Convert(t);
+            Solve();
+            Output(board);
+        }
+
+        int[][] board;
+
+        int[][] regionMatrix;
+
+        int[][] mask;
 
         static List<string> Read()
         {
@@ -60,21 +90,37 @@ namespace sudokusolver
             Console.WriteLine();
         }
 
-        static int[][] Solve(int[][] u)
+        void Solve()
         {
             int[] x = new int[10];
             int[] y = new int[10];
             int[] z = new int[10];
 
-            Determine(u, x, y, z);
+            Determine(x, y, z);
 
-            while (FillKnown(u, x, y, z)) { }
+            while (FillKnown(x, y, z)) { }
 
-            Output(u);
+            Output(board);
 
             //NeedGuess(u, x, y, z);
 
-            return u;
+            //return u;
+        }
+
+        private void Determine(int[] row, int[] col, int[] sq)
+        {
+            for (int i = 0; i < 9; ++i)
+            {
+                for (int j = 0; j < 9; ++j)
+                {
+                    if (board[i][j] > 0)
+                    {
+                        Mark(row, i, board[i][j]); // row
+                        Mark(col, j, board[i][j]); // column
+                        Mark(sq, regionMatrix[i][j], board[i][j]); // region
+                    }
+                }
+            }
         }
 
         private static void NeedGuess(int[][] u, int[] x, int[] y, int[] z)
@@ -96,225 +142,119 @@ namespace sudokusolver
             return 0;
         }
 
-        private static bool FillKnown(int[][] u, int[] x, int[] y, int[] z)
+        private void Assign(int[] row, int[] col, int[] sq, int i, int j, int _z, int k)
         {
-            int[][] n = new int[][] {
-                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
-                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
-                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
-                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
-                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
-                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
-                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 },
-                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 },
-                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 }
-            };
+            if (board[i][j] != 0)
+                throw new NotImplementedException();
 
-            int[][] P = new int[9][];
+            board[i][j] = k;
+            Mark(row, i, k);
+            Mark(col, j, k);
+            Mark(sq, _z, k);
+        }
+
+        private static void Mark(int[] arr, int i, int k)
+        {
+            if ((arr[i] & (1 << k)) != 0)
+                throw new NotImplementedException();
+            arr[i] |= 1 << k;
+        }
+
+        private void CalculateMask(int[] row, int[] col, int[] sq)
+        {
             for (int i = 0; i < 9; ++i)
-                P[i] = new int[9];
-
-            bool filled = false;
-            //int k;
-            for(int i=0; i<9; ++i)
             {
-                for(int j=0; j<9; ++j)
+                for (int j = 0; j < 9; ++j)
                 {
-                    if (u[i][j] != 0)
+                    if (board[i][j] != 0)
                         continue;
 
-                    P[i][j] = (x[i]) | (y[j]) | (z[n[i][j]]);
-                    int k = MissingOne(P[i][j]);
-                    if (k>0)
+                    mask[i][j] = (row[i]) | (col[j]) | (sq[regionMatrix[i][j]]);
+                }
+            }
+        }
+
+        private bool FillKnown(int[] row, int[] col, int[] sq)
+        {
+            CalculateMask(row, col, sq);
+
+            if (FindMissingOne(row, col, sq))
+                return true;
+
+            if (FindOnlyOneFit(row, col, sq))
+                return true;
+
+            return false;
+        }
+
+        private bool FindMissingOne(int[] row, int[] col, int[] sq)
+        {
+            //bool filled = false;
+
+            for (int i = 0; i < 9; ++i)
+            {
+                for (int j = 0; j < 9; ++j)
+                {
+                    if (board[i][j] != 0)
+                        continue;
+
+                    int k = MissingOne(mask[i][j]);
+                    if (k > 0)
                     {
-                        Assign(u, x, y, z, i, j, n[i][j], k);
-                        Output(u);
-                        filled = true;
+                        Assign(row, col, sq, i, j, regionMatrix[i][j], k);
+                        Console.WriteLine($"FindMissingOne = {i} {j} {k} {board[i][j]}");
+                        //Output(u);
+                        return true;
+                        //filled = true;
                     }
                 }
-                //k = MissingOne(x[i]);
-                //if (k > 0)
-                //{
-                //    RowFill(u, i, k);
-                //    filled = true;
-                //}
-                //k = MissingOne(y[i]);
-                //if (k > 0)
-                //{
-                //    ColumnFill(u, i, k);
-                //    filled = true;
-                //}
-                //k = MissingOne(z[i]);
-                //if (k > 0)
-                //{
-                //    RegionFill(u, i, k);
-                //    filled = true;
-                //}
             }
+            //return filled;
+            return false;
+        }
 
-            if (!filled)
-            {
-                for (int i = 0; i <9 && !filled; ++i)
-                    for(int j=0; j< 9 && !filled; ++j)
+        private bool FindOnlyOneFit(int[] x, int[] y, int[] z)
+        {
+            //bool filled = false;
+            for (int i = 0; i < 9; ++i)
+                for (int j = 0; j < 9; ++j)
+                {
+                    if (board[i][j] != 0)
+                        continue;
+
+                    // try each value
+                    for (int trial = 1; trial <= 9; ++trial)
                     {
-                        if (u[i][j] > 0)
+                        if (0 != (mask[i][j] & (1 << trial))) // value used
                             continue;
 
-                        // try each value
-                        for (int trial = 1; trial <= 9; ++trial)
+                        int d1 = 0, d2 = 0, d3 = 0;
+                        for (int r = 0; r < 9; ++r)
                         {
-                            if (0 != (P[i][j] & (1 << trial))) // value used
-                                continue;
-
-                            int d1 = 0, d2 = 0, d3 = 0;
-                            for(int r = 0; r<9; ++r)
+                            if (board[i][r] == 0 && 0 == (mask[i][r] & (1 << trial)))
+                                ++d1;
+                            if (board[r][j] == 0 && 0 == (mask[r][j] & (1 << trial)))
+                                ++d2;
+                            for (int s = 0; s < 9; ++s)
                             {
-                                if (u[i][r] == 0 && 0 == (P[i][r] & (1 << trial)))
-                                    ++d1;
-                                if (u[r][j] == 0 && 0 == (P[r][j] & (1 << trial)))
-                                    ++d2;
-                                for(int s = 0; s<9;++s)
-                                {
-                                    if (n[r][s] == n[i][j] && u[r][s] == 0 && 0 == (P[r][s] & (1 << trial)))
-                                        ++d3;
-                                }
-                            }
-
-                            if (d1 == 1 || d2 == 1 || d3 == 1) // only itself
-                            {
-                                Assign(u, x, y, z, i, j, n[i][j], trial);
-                                filled = true;
-                                break;
+                                if (regionMatrix[r][s] == regionMatrix[i][j] && board[r][s] == 0 && 0 == (mask[r][s] & (1 << trial)))
+                                    ++d3;
                             }
                         }
-                    }
-            }
 
-            return filled;
-        }
-
-        private static void Assign(int[][] u, int[] x, int[] y, int[] z, int i, int j, int _z, int k)
-        {
-            if(u[i][j] != 0)
-                throw new NotImplementedException();
-
-            u[i][j] = k;
-            Mark(x, i, k);
-            Mark(y, j, k);
-            Mark(z, _z, k);
-        }
-
-        private static void Mark(int[] x, int i, int k)
-        {
-            if ((x[i] & (1 << k)) != 0)
-                throw new NotImplementedException();
-            x[i] |= 1 << k;
-        }
-        /*
-        private static void RegionFill(int[][] u, int p, int k)
-        {
-            int[][] n = new int[][] {
-                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
-                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
-                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
-                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
-                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
-                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
-                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 },
-                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 },
-                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 }
-            };
-
-            for (int i = 0; i < 9; ++i)
-            {
-                for (int j = 0; j < 9; ++j)
-                {
-                    if (u[i][j] == 0 && n[i][j] == p)
-                    {
-                        u[i][j] = k;
+                        if (d1 == 1 || d2 == 1 || d3 == 1) // only itself
+                        {
+                            Console.WriteLine($"FindOnlyOneFit = {i} {j} {trial} {board[i][j]}");
+                            Assign(x, y, z, i, j, regionMatrix[i][j], trial);
+                            //filled = true;
+                            //break;
+                            return true;
+                        }
                     }
                 }
-            }
-
-            int[] d = new int[9];
-            for (int i = 0; i < 9; ++i)
-            {
-                for (int j = 0; j < 9; ++j)
-                {
-                    if (n[i][j] == p)
-                    {
-                        d[ u[i][j]-1 ]++;
-                    }
-                }
-            }
-            bool b = d.All(x => x == 1);
-            if (!b)
-                throw new NotImplementedException();
+            //return filled;
+            return false;
         }
 
-        private static void ColumnFill(int[][] u, int i, int k)
-        {
-            for (int j = 0; j < 9; ++j)
-            {
-                if (u[j][i] == 0)
-                    u[j][i] = k;
-            }
-
-            int[] d = new int[9];
-            for (int j = 0; j < 9; ++j)
-            {
-                ++d[u[j][i]-1];
-            }
-            bool b = d.All(x => x == 1);
-            if (!b)
-                throw new NotImplementedException();
-        }
-
-        private static void RowFill(int[][] u, int i, int k)
-        {
-            for(int j=0; j<9; ++j)
-            {
-                if (u[i][j] == 0)
-                    u[i][j] = k;
-            }
-
-            int[] d = new int[9];
-            for (int j = 0; j < 9; ++j)
-            {
-                ++d[u[i][j]-1];
-            }
-            bool b = d.All(x => x == 1);
-            if (!b)
-                throw new NotImplementedException();
-        }
-        */
-        private static void Determine(int[][] u, int[] x, int[] y, int[] z)
-        {
-            //int[] m = new int[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-            int[][] n = new int[][] {
-                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
-                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
-                new int[] { 0, 0, 0, 1, 1, 1, 2, 2, 2 },
-                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
-                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
-                new int[] { 3, 3, 3, 4, 4, 4, 5, 5, 5 },
-                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 },
-                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 },
-                new int[] { 6, 6, 6, 7, 7, 7, 8, 8, 8 }
-            };
-
-            for (int i = 0; i < 9; ++i)
-            {
-                for (int j = 0; j < 9; ++j)
-                {
-                    if (u[i][j] > 0)
-                    {
-                        Mark(x, i, u[i][j]); // row
-                        Mark(y, j, u[i][j]); // column
-                        Mark(z, n[i][j], u[i][j]); // region
-                    }
-                }
-            }
-        }
     }
 }

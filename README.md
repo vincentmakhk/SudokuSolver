@@ -2,10 +2,6 @@
 
 Console C# program to solve Sudoku
 
-## Status
-
-It's not completed yet: it can only solve simple ones. 
-
 ## Usage
 
 Input: a 9x9 text matrix:
@@ -46,10 +42,15 @@ Vincent Mak
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 License - see the LICENSE.txt file for details
+This project is licensed under the GNU General Public License v3.0 License - see the [LICENSE.txt](LICENSE.txt) file for details
 
 ## Acknowledgments
 
 Thanks Nikoli for the invention of Sudoku
 
-Thanks https://sudoku.com/ for generating samples
+Thanks the following websites for providing puzzles:
+- https://sudoku.com/ - from beginners to evil
+- https://puzzling.stackexchange.com/questions/12/are-there-published-sudoku-puzzles-that-require-guessing - for samples that needs guessing
+- https://www.telegraph.co.uk/news/science/science-news/9359579/Worlds-hardest-sudoku-can-you-crack-it.html - benchmark to prove a good solution
+- http://www.sudokuwiki.org/Weekly_Sudoku.asp - for more difficult samples
+- and other various sites

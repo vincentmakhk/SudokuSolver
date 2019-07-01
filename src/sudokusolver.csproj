@@ -7,8 +7,8 @@
     <ProjectGuid>{F612B6B7-E323-472F-8FDD-2AB8BA7D4143}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>sudokuai</RootNamespace>
-    <AssemblyName>sudokuai</AssemblyName>
+    <RootNamespace>sudokusolver</RootNamespace>
+    <AssemblyName>sudokusolver</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>

@@ -36,6 +36,14 @@ Output: a filled 9x9 text matrix:
 
 A Visual Studio 2015 project file with .NET framework 4.5.2
 
+## Algorithm
+
+Two logical deduction are used:
+- only possible number in that cell, due to other numbers have been used in the same row, column, or 3x3 square
+- only possible number in that cell within its 3x3 square, by considering what the unfilled cells can possibly be
+
+And try recursive guessing once the logics exhausted
+
 ## Authors
 
 Vincent Mak
